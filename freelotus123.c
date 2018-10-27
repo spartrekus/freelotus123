@@ -54,6 +54,7 @@ int rows, cols;
  int clipboardtype = 0; 
  char celldata[ CELLYMAXY+10 ][ CELLYMAXX+10  ][PATH_MAX];
  int celldatatype[ CELLYMAXY+10  ][ CELLYMAXX+10 ];
+ char currentcellline[PATH_MAX];
  int user_scrolly = 0; 
  int user_col_space   = CELLXSPACE;
  int user_col_charmax = CELLXSPACE;
@@ -1478,6 +1479,33 @@ void void_draw()
 
 
 
+/////////////////////
+/////////////////////
+/////////////////////
+void app_save()
+{
+   int readcellx , readcelly ; 
+   FILE *fp6;
+   fp6 = fopen( filesource , "wb+");
+   for( readcelly=1 ; readcelly<=CELLYMAXY ; readcelly++) 
+   {
+     for( readcellx=1 ; readcellx<=CELLYMAXX ; readcellx++) 
+     {
+        if ( celldatatype[readcelly][readcellx] == 2 ) fputs( "=", fp6 );
+        fputs( celldata[readcelly][readcellx], fp6 );
+  	fputs( ";", fp6 );
+     }
+     fputs( "\n", fp6 );
+   }
+   fclose( fp6 );
+}
+/////////////////////
+/////////////////////
+/////////////////////
+
+
+
+
 
 ////
 void main_app_draw()
@@ -1515,8 +1543,11 @@ void main_app_draw()
      mvprintw( readcelly , 0, "   "); 
      mvprintw( readcelly , 0, "%d", readcelly );
    }
+
+   // clear and clean
    color_set( 0, NULL );
    attroff( A_REVERSE );
+   strncpy( currentcellline, "" , PATH_MAX );
 
    //posy = readcelly;
    posy = 1;
@@ -1533,7 +1564,9 @@ void main_app_draw()
       {
        posx = user_col_space * readcellx ;  
        attroff( A_REVERSE ); 
-       if ( ( user_cellx == readcellx ) && ( user_celly == readcelly ) ) {   attron(A_REVERSE );  }
+       if ( ( user_cellx == readcellx ) && ( user_celly == readcelly ) ) {   
+             attron(A_REVERSE );  
+       }
 
        if ( ( celldatatype[readcelly][readcellx] == 1 ) && ( strcmp( celldata[readcelly][readcellx] , "" ) == 0 ) ) 
           mvprintw( posy , posx, "-" );
@@ -1552,19 +1585,34 @@ void main_app_draw()
        }
        else if ( celldatatype[readcelly][readcellx] == 2 )
           mvprintw( posy , posx, "%f", te_interp( celldata[readcelly][readcellx] , 0 ) );
-      
-       }
-       posy++;
+       
+       // end of loop right
+        if ( user_celly == readcelly )
+        {
+         if ( celldatatype[readcelly][readcellx] == 2 ) 
+               strncat( currentcellline , "="  , PATH_MAX - strlen( currentcellline ) -1 ); 
+         strncat( currentcellline , celldata[readcelly][readcellx]  , PATH_MAX - strlen( currentcellline ) -1 ); 
+         strncat( currentcellline , ";"  , PATH_MAX - strlen( currentcellline ) -1 );
+        }
+      // end of loop right
      }
+     posy++;
+    }
    }
-   attroff( A_REVERSE ); 
-   color_set( 0, NULL ); 
+
+   // lower status line/bar and content
+   attroff( A_REVERSE ); color_set( 0, NULL );  attroff( A_BOLD );
+   gfxhline( rows-2 , 0, cols-1 );
+   gfxhline( rows-1 , 0, cols-1 );
+
    mvprintw( rows-1, 0, "[%d,%d]|%s|", user_celly, user_cellx, filesource );
    if (  celldatatype[ user_celly][user_cellx ]  == 2 )  
      mvprintw( rows-2, 0, "[=%s]",   celldata[ user_celly][user_cellx ] );
    else
      mvprintw( rows-2, 0, "[%s]", celldata[ user_celly][user_cellx ] );
 }
+
+
 
 
 
@@ -1585,6 +1633,7 @@ int main( int argc, char *argv[])
 
     int fooy, foox; 
     void_cell_clear();
+    strncpy( currentcellline , "" , PATH_MAX );
 
     initscr();	
     curs_set( 0 );
@@ -1644,7 +1693,46 @@ int main( int argc, char *argv[])
               gameover = 1; 
               break;
 
+           case 'q':
+              foo = void_ncwin_message( "" , " Exit Program?", "This will quit the following application." );
+              if ( foo == 1 ) gameover = 1;
+              break;
+
+           case KEY_F(1):
+              foo = void_ncwin_message( "Help Content" , "Help", "hjlk: move, enter/=:cell edit, ?:content, F10:exit, have fun with freedom and opensource." );
+              break;
+
+           case '?':
+              foo = void_ncwin_message( "Current line" , "Information",  currentcellline );
+              break;
+
+           case KEY_F(2):
+              snprintf( foostr , PATH_MAX , "Would you like to save to %s filename.", filesource );
+              foo = void_ncwin_message( "File operation" , "Save data [y/N]?", foostr );
+              if ( foo == 1 )
+              {
+                 app_save();
+                 if ( fexist( filesource ) == 1 ) 
+                  void_ncwin_message( "File operation" , "Saved!", "The file has been saved with success." );
+              }
+              break;
+
+           case KEY_F(3):
+              snprintf( foostr  , PATH_MAX , "Would you like to load to %s filename.", filesource );
+              foo = void_ncwin_message( "File operation" , "Load data [y/N]?", foostr );
+              if ( foo == 1 )
+              {
+                    void_cell_clear();
+                    void_load();
+              }
+              break;
+
+           case '!':
+              ncurses_runwith( strninput( "" ) , filesource ); 
+              break;
+
            case 'd':
+           case 'n':
               user_celly++;
               user_celly++;
               user_celly++;
@@ -1673,17 +1761,25 @@ int main( int argc, char *argv[])
               user_celly--;
               break;
 
+           case 32:
+              user_celly++;
+              user_celly++;
+              user_celly++;
+              user_celly++;
+              break;
+
            case '0':
               user_cellx = 1; 
               break;
-           case '$':
-              user_cellx = CELLYMAXX;
-              break;
-
 
            case 'g':
               user_cellx = 1;
               user_celly = 1;
+              break;
+
+           case '$':
+              //user_cellx = CELLYMAXX-1;
+              user_cellx = CELLYMAXX;
               break;
 
            case 'c':
@@ -1696,22 +1792,18 @@ int main( int argc, char *argv[])
               void_cell_clear();
               void_load(); 
               break;
-           case KEY_F(4):
            case 'v':
-              ncurses_runwith( " vim  " , filesource ); 
-              void_cell_clear();
-              void_load(); 
-              break;
-           case 'r':
-              ncurses_runwith( " tcview  " , filesource ); 
-              void_cell_clear();
-              void_load(); 
+              snprintf( foostr , PATH_MAX , "Would you like to use vim with %s filename.", filesource );
+              foo = void_ncwin_message( "File operation" , "VIM data [y/N]?", foostr );
+              if ( foo == 1 ) 
+              {
+                ncurses_runwith( " vim  " , filesource ); 
+                void_cell_clear();
+                void_load(); 
+              }
               break;
            ////////// reload end
 
-           case 'e':
-              strncpy( celldata[user_celly][user_cellx], strninput( celldata[user_celly][user_cellx]  ) , PATH_MAX );
-              break;
 
            case '=':
               strncpy( celldata[user_celly][user_cellx], strninput( "" ) , PATH_MAX );
@@ -1763,16 +1855,17 @@ int main( int argc, char *argv[])
               celldatatype[user_celly][user_cellx] = clipboardtype ; 
               break;
 
-           case 'q':
-              foo = void_ncwin_message( "" , " Exit Program?", "This will quit the following application." );
-              if ( foo == 1 ) gameover = 1;
-              break;
+
            case 'Q':
               foo = void_ncdialog_message( "Message" , " Exit Program?", "This will quit the following application." );
               if ( foo == 1 ) gameover = 1;
               break;
 
+           case 'e':
            case 10:
+              strncpy( celldata[user_celly][user_cellx], strninput( celldata[user_celly][user_cellx]  ) , PATH_MAX );
+              break;
+           case 'b': //blank cell
               strncpy( celldata[user_celly][user_cellx], strninput( "" ) , PATH_MAX );
               celldatatype[user_celly][user_cellx] = 1;
               break;
