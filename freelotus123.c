@@ -18,7 +18,8 @@
 #define MYOS 0
 #endif
 
-#define CELLYMAXY 40 
+/// max lines of a given file
+#define CELLYMAXY 120 
 #define CELLYMAXX 11
 #define CELLXSPACE 11
 
@@ -60,13 +61,101 @@ int rows, cols;
  int user_col_charmax = CELLXSPACE;
 
 
+
+
+/////////////////////////////////
+/////////////////////////////////
+/////////////////////////////////
+int fexist(char *a_option)
+{
+  char dir1[PATH_MAX]; 
+  char *dir2;
+  DIR *dip;
+  strncpy( dir1 , "",  PATH_MAX  );
+  strncpy( dir1 , a_option,  PATH_MAX  );
+
+  struct stat st_buf; 
+  int status; 
+  int fileordir = 0 ; 
+
+  status = stat ( dir1 , &st_buf);
+  if (status != 0) {
+    fileordir = 0;
+  }
+
+  // this is compatible to check if a file exists
+  FILE *fp2check = fopen( dir1  ,"r");
+  if( fp2check ) {
+  // exists
+  fileordir = 1; 
+  fclose(fp2check);
+  } 
+
+  if (S_ISDIR (st_buf.st_mode)) {
+    fileordir = 2; 
+  }
+return fileordir;
+/////////////////////////////
+}
+
+
+
+
+
+int filelinecount( char *filesource )
+{
+  FILE *fp;
+  FILE *fp1; 
+  FILE *fp2;
+  int counter = 0 ; 
+  int freader = 1 ; 
+  int i , j ,posy, posx ; 
+  char linetmp[PATH_MAX] ;
+  char line[PATH_MAX];
+  char foundline[PATH_MAX] ;
+  strncpy( foundline , "" , PATH_MAX );
+  if ( fexist( filesource ) == 1 )
+  {
+        fp1 = fopen( filesource, "rb");
+        counter = 0; 
+	freader = 1;
+        while( !feof(fp1) && ( freader == 1)   ) {
+          strncpy( linetmp, "", PATH_MAX );
+          fgets(linetmp, PATH_MAX, fp1); 
+              //strncpy(line, binstrrlf( linetmp ), PATH_MAX );
+              if ( !feof(fp1) )
+              {
+                  counter++;
+	      }
+         }
+        fclose(fp1);
+    }
+   return counter;
+   //return counter-1;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 //////////////////////////////////////////////
 // start of lib for maths
 //////////////////////////////////////////////
 //////////////////////////////////////////////
 #ifndef __TINYEXPR_H__
 #define __TINYEXPR_H__
-
 
 #ifdef __cplusplus
 extern "C" {
@@ -832,6 +921,77 @@ char *strrlf(char *str)
 
 
 
+////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////
+char *strfetchcontent( char *str, int foocy, int foocx  )
+{ 
+      // str is input 
+      // ptr is output 
+      char ptr[PATH_MAX];
+      char charo[PATH_MAX];
+      strncpy( ptr, "", PATH_MAX );
+      int i,j=0;
+      for(i=0; str[i]!='\0'; i++)
+      {
+        if ( str[i] == 'R' ) //right
+        {
+           snprintf( charo, PATH_MAX , " ( %s ) ", strfetchcontent( celldata[ foocy ][ foocx +1 ], foocy , foocx+1 ) );
+           strncat( ptr , charo , PATH_MAX - strlen( ptr ) -1 ); 
+        }
+        else if ( str[i] == 'L' ) //left
+        {
+           snprintf( charo, PATH_MAX , " ( %s ) ", strfetchcontent( celldata[ foocy ][ foocx -1 ], foocy , foocx-1 ) );
+           strncat( ptr , charo , PATH_MAX - strlen( ptr ) -1 ); 
+        }
+        else if ( str[i] == 'X' )  //upper dia
+        {
+           ///snprintf( charo, PATH_MAX , "%s", celldata[ foocy -1 ][ foocx -1 ] );
+           snprintf( charo, PATH_MAX , " ( %s ) ", strfetchcontent( celldata[ foocy-1 ][ foocx-1 ], foocy-1 , foocx-1 ) );
+           strncat( ptr , charo , PATH_MAX - strlen( ptr ) -1 ); 
+        }
+        else if ( str[i] == 'D' ) // Down
+        {
+           ///snprintf( charo, PATH_MAX , "%s", celldata[ foocy -1 ][ foocx -1 ] );
+           snprintf( charo, PATH_MAX , " ( %s ) ", strfetchcontent( celldata[ foocy+1 ][ foocx ], foocy+1 , foocx-1 ) );
+           strncat( ptr , charo , PATH_MAX - strlen( ptr ) -1 ); 
+        }
+        else if ( str[i] == 'U' ) // up
+        {
+           snprintf( charo, PATH_MAX , " ( %s ) ", strfetchcontent( celldata[ foocy-1 ][ foocx ], foocy-1 , foocx ) );
+           //snprintf( charo, PATH_MAX , "%s", celldata[ foocy -1 ][ foocx ] );
+           strncat( ptr , charo , PATH_MAX - strlen( ptr ) -1 ); 
+        }
+        else if (str[i] != '\n' && str[i] != '\n') 
+        {
+           //   ptr[j++]=str[i];
+           snprintf( charo, PATH_MAX , "%c", str[i] );
+           strncat( ptr , charo , PATH_MAX - strlen( ptr ) -1 ); 
+        }
+      } 
+      //ptr[j]='\0';
+      //size_t siz = sizeof ptr ; 
+      //char *r = malloc( sizeof ptr );
+      //return r ? memcpy(r, ptr, siz ) : NULL;
+      char *base = ptr ; 
+      return (base);
+}
+
+
+char *fbasename(char *name)
+{
+  char *base = name;
+  while (*name)
+    {
+      if (*name++ == '/')
+      {
+	  base = name;
+      }
+    }
+  return (base);
+}
+
+
 
 
 /*
@@ -1041,11 +1201,14 @@ char *strninput( char *myinitstring )
                            foo = snprintf( charo, PATH_MAX , "%s%c",  strmsg, ch );
 			   strncpy( strmsg,  charo ,  PATH_MAX );
 		  }
-		  else if ( ch == 10 ) 
-		  {
+		  else if ( ch == KEY_DOWN ) 
                         strninput_gameover = 1;
-		  }
+		  else if ( ch == KEY_UP ) 
+                        strninput_gameover = 1;
+		  else if ( ch == 10 ) 
+                        strninput_gameover = 1;
      }
+
      char ptr[PATH_MAX];
      strncpy( ptr, strmsg, PATH_MAX );
      size_t siz = sizeof ptr ; 
@@ -1229,44 +1392,6 @@ void ncurses_runwith( char *thecmd , char *thestrfile  ) //thecmd first
 
 
 
-/////////////////////////////////
-/////////////////////////////////
-/////////////////////////////////
-int fexist(char *a_option)
-{
-  char dir1[PATH_MAX]; 
-  char *dir2;
-  DIR *dip;
-  strncpy( dir1 , "",  PATH_MAX  );
-  strncpy( dir1 , a_option,  PATH_MAX  );
-
-  struct stat st_buf; 
-  int status; 
-  int fileordir = 0 ; 
-
-  status = stat ( dir1 , &st_buf);
-  if (status != 0) {
-    fileordir = 0;
-  }
-
-  // this is compatible to check if a file exists
-  FILE *fp2check = fopen( dir1  ,"r");
-  if( fp2check ) {
-  // exists
-  fileordir = 1; 
-  fclose(fp2check);
-  } 
-
-  if (S_ISDIR (st_buf.st_mode)) {
-    fileordir = 2; 
-  }
-return fileordir;
-/////////////////////////////
-}
-
-
-
-
 
 
 ////////////////////////
@@ -1396,6 +1521,95 @@ void void_cell_clear()
 
 
 
+
+
+
+/////////////////////////
+/////////////////////////
+int  nexp_user_sel = 1;
+int  nexp_user_scrolly =0 ;
+char nexp_user_fileselection[PATH_MAX]; 
+int  tc_det_dir_type = 0;
+/////////////////////////
+void printdir()
+{
+
+   DIR *dirp; int posy = 0;  int posx, chr ; 
+   int fooselection = 0;
+   posy = 1; posx = cols/2;
+   char cwd[PATH_MAX];
+   struct dirent *dp;
+   dirp = opendir( "." );
+   attron( A_REVERSE );
+
+   color_set( 7, NULL ); attron( A_REVERSE );
+   gfxbox( 0, cols/2-2, rows-1, cols-1 );
+   //gfxhline( 0, 0, cols-1 );
+   mvprintw( 0, cols/2, "[DIR: %s]", getcwd( cwd, PATH_MAX ) );
+   strncpy( nexp_user_fileselection, "", PATH_MAX );
+   color_set( 11, NULL ); attron( A_REVERSE );
+   int entrycounter = 0;
+   while  ((dp = readdir( dirp )) != NULL ) 
+   if ( posy <= rows-3 )
+   {
+        entrycounter++;
+        color_set( 13, NULL ); attron( A_REVERSE ); attroff( A_BOLD );
+
+        if ( entrycounter <= nexp_user_scrolly )
+              continue;
+
+        if (  dp->d_name[0] !=  '.' ) 
+        if (  strcmp( dp->d_name, "." ) != 0 )
+        if (  strcmp( dp->d_name, ".." ) != 0 )
+        {
+            posy++;  fooselection++;
+
+            if ( dp->d_type == DT_DIR ) 
+            {
+                 color_set( 12 , NULL );
+                 mvaddch( posy, posx++ , '/' );
+            }
+            else if ( dp->d_type == 0 )
+            {
+               if ( tc_det_dir_type == 1 )
+               if ( fexist( dp->d_name ) == 2 )
+               {
+                 color_set( 7 , NULL );
+                 mvaddch( posy, posx++ , '/' );
+               }
+            }
+
+            if ( nexp_user_sel == fooselection ) 
+            {
+                  strncpy( nexp_user_fileselection, dp->d_name , PATH_MAX );
+                  color_set( 6, NULL );
+            }
+
+            for ( chr = 0 ;  chr <= strlen(dp->d_name) ; chr++) 
+            {
+              if  ( dp->d_name[chr] == '\n' )
+                  posx = cols/2;
+              else if  ( dp->d_name[chr] == '\0' )
+                  posx = cols/2;
+              else
+                 mvaddch( posy, posx++ , dp->d_name[chr] );
+            }
+        }
+   }
+   closedir( dirp );
+
+   color_set( 7, NULL ); attroff( A_REVERSE );
+   //gfxhline( rows-1, 0, cols-1 );
+   mvprintw( rows-1, cols/2, "[FILE: %s]", nexp_user_fileselection );
+}
+
+
+
+
+
+
+
+
 ////////////////////////
 void void_draw()
 {
@@ -1482,11 +1696,11 @@ void void_draw()
 /////////////////////
 /////////////////////
 /////////////////////
-void app_save()
+void app_save( char *strfileoutput )
 {
    int readcellx , readcelly ; 
    FILE *fp6;
-   fp6 = fopen( filesource , "wb+");
+   fp6 = fopen( strfileoutput , "wb+");
    for( readcelly=1 ; readcelly<=CELLYMAXY ; readcelly++) 
    {
      for( readcellx=1 ; readcellx<=CELLYMAXX ; readcellx++) 
@@ -1516,6 +1730,8 @@ void main_app_draw()
    int y2 = rows-1; int x2= cols -1 ;
    int foox ; int fooy; 
    color_set( 0, NULL ); attroff( A_REVERSE ); 
+
+   char foocellcontent[PATH_MAX];
     
    int foocelly = 1;
    int foocellx = 1;
@@ -1584,7 +1800,12 @@ void main_app_draw()
                addch( fetchlinetmp[ fetchi] );
        }
        else if ( celldatatype[readcelly][readcellx] == 2 )
-          mvprintw( posy , posx, "%f", te_interp( celldata[readcelly][readcellx] , 0 ) );
+       {
+          strncpy( foocellcontent, strfetchcontent( celldata[readcelly][readcellx] , readcelly, readcellx ) , PATH_MAX );
+          //char *strfetchcontent( char *str, int foocy, int foocx  )
+          mvprintw( posy , posx, "%f",  
+          te_interp( foocellcontent , 0 ) );
+       }
        
        // end of loop right
         if ( user_celly == readcelly )
@@ -1607,9 +1828,13 @@ void main_app_draw()
 
    mvprintw( rows-1, 0, "[%d,%d]|%s|", user_celly, user_cellx, filesource );
    if (  celldatatype[ user_celly][user_cellx ]  == 2 )  
-     mvprintw( rows-2, 0, "[=%s]",   celldata[ user_celly][user_cellx ] );
+     mvprintw( rows-2, 0, "[%d][=%s]",  
+     celldatatype[ user_celly][user_cellx ] , 
+     celldata[ user_celly][user_cellx ] );
    else
-     mvprintw( rows-2, 0, "[%s]", celldata[ user_celly][user_cellx ] );
+     mvprintw( rows-2, 0, "[%d][%s]", 
+     celldatatype[ user_celly][user_cellx ] , 
+     celldata[ user_celly][user_cellx ] );
 }
 
 
@@ -1619,8 +1844,9 @@ void main_app_draw()
 ///////////////
 int main( int argc, char *argv[])
 {
-    int foo;
+    int foo; int foochg; 
     char foostr[PATH_MAX];
+    char foomsgstr[PATH_MAX];
     //////////////////////////////////////////
     strncpy( filesource , "noname.ws1" , PATH_MAX );
     if ( argc == 2)
@@ -1651,7 +1877,9 @@ int main( int argc, char *argv[])
     init_pair(8,  COLOR_BLUE,    COLOR_GREEN);
     init_pair(9,  COLOR_WHITE,   COLOR_BLACK);
     init_pair(10, COLOR_WHITE,   COLOR_RED);
-    init_pair(11, COLOR_RED,     COLOR_WHITE);
+    init_pair(11,  COLOR_RED,     COLOR_WHITE);
+    init_pair(12,  COLOR_BLUE,    COLOR_YELLOW);
+    init_pair(13,  COLOR_BLUE,    COLOR_MAGENTA);
 
     erase();
     getmaxyx( stdscr, rows, cols);
@@ -1711,7 +1939,7 @@ int main( int argc, char *argv[])
               foo = void_ncwin_message( "File operation" , "Save data [y/N]?", foostr );
               if ( foo == 1 )
               {
-                 app_save();
+                 app_save( filesource );
                  if ( fexist( filesource ) == 1 ) 
                   void_ncwin_message( "File operation" , "Saved!", "The file has been saved with success." );
               }
@@ -1727,8 +1955,55 @@ int main( int argc, char *argv[])
               }
               break;
 
+           case KEY_F(4):
+              color_set( 0, NULL ); attron( A_REVERSE );  mvprintw( 0, 0, "|SAVE AS|" );
+              strncpy(  foomsgstr , strninput( filesource ) , PATH_MAX );
+              snprintf( foostr , PATH_MAX , "Would you like to save to %s filename.", foomsgstr );
+              foo = void_ncwin_message( "File operation" , "Save data [y/N]?", foostr );
+              if ( foo == 1 )
+              {
+                 app_save( foomsgstr );
+                 strncpy( filesource, foomsgstr , PATH_MAX ); void_cell_clear(); void_load();
+                 if ( fexist( filesource ) == 1 ) void_ncwin_message( "File operation" , "Saved!", "The file has been saved with success." );
+              }
+              break;
+
+           case 15:
+           case 'o':
+              foochg = 0; 
+              while ( foochg != 'i' )
+              { 
+                printdir(); 
+                foochg = getch();
+                if ( foochg == 'j' )      nexp_user_sel++; 
+                else if ( foochg == 'k' ) nexp_user_sel--;
+                else if ( foochg == 'g' ) nexp_user_sel = 1;
+                else if ( foochg == 'r' ) ncurses_runwith( " tcview " , nexp_user_fileselection );
+                else if ( foochg == 10 ) { strncpy( filesource, nexp_user_fileselection, PATH_MAX ); void_cell_clear(); void_load(); foochg = 'i'; }
+              }
+              break;
+
+           case 'v':
+              snprintf( foostr , PATH_MAX , "Would you like to use vim with %s filename.", filesource );
+              foo = void_ncwin_message( "File operation" , "VIM data [y/N]?", foostr );
+              if ( foo == 1 ) 
+              {
+                ncurses_runwith( " vim  " , filesource ); 
+                void_cell_clear();
+                void_load(); 
+              }
+              break;
+           ////////// reload end
+
            case '!':
               ncurses_runwith( strninput( "" ) , filesource ); 
+              break;
+
+           case ':':
+              color_set( 0, NULL ); attroff( A_REVERSE );
+              strncpy( foostr, strninput( "" ) , PATH_MAX );
+              if (  strcmp( foostr, "linecount" ) == 0 )
+                   {  erase(); mvcenter( 0, "INFORMATION" ); mvprintw( 2, 0, "Line count: %s %d", filesource, filelinecount(     filesource ) ); getch();  }
               break;
 
            case 'd':
@@ -1761,16 +2036,10 @@ int main( int argc, char *argv[])
               user_celly--;
               break;
 
-           case 32:
-              user_celly++;
-              user_celly++;
-              user_celly++;
-              user_celly++;
-              break;
 
-           case '0':
-              user_cellx = 1; 
-              break;
+           //case '0':
+           //   user_cellx = 1; 
+           //   break;
 
            case 'g':
               user_cellx = 1;
@@ -1787,22 +2056,11 @@ int main( int argc, char *argv[])
               break;
 
            ////////// reload and co, start
-           case 15:
-           case 's':
-              void_cell_clear();
-              void_load(); 
-              break;
-           case 'v':
-              snprintf( foostr , PATH_MAX , "Would you like to use vim with %s filename.", filesource );
-              foo = void_ncwin_message( "File operation" , "VIM data [y/N]?", foostr );
-              if ( foo == 1 ) 
-              {
-                ncurses_runwith( " vim  " , filesource ); 
-                void_cell_clear();
-                void_load(); 
-              }
-              break;
-           ////////// reload end
+           //case 's':
+             // void_cell_clear();
+             // void_load(); 
+             // break;
+
 
 
            case '=':
@@ -1819,9 +2077,10 @@ int main( int argc, char *argv[])
            case '7':
            case '8':
            case '9':
+           case '0':
               snprintf( foostr  , PATH_MAX , "%c", ch );
               strncpy( celldata[user_celly][user_cellx], strninput( foostr ) , PATH_MAX );
-              celldatatype[user_celly][user_cellx] = 1;
+              celldatatype[user_celly][user_cellx] = 2;
               user_celly++;
               break;
 
@@ -1844,6 +2103,7 @@ int main( int argc, char *argv[])
               clipboardtype = celldatatype[user_celly][user_cellx]; 
               break;
            case 'x':
+           case 330:
               strncpy( clipboard, celldata[user_celly][user_cellx], PATH_MAX );
               clipboardtype = celldatatype[user_celly][user_cellx]; 
               strncpy( celldata[user_celly][user_cellx], "" , PATH_MAX );
@@ -1863,8 +2123,10 @@ int main( int argc, char *argv[])
 
            case 'e':
            case 10:
+           case 32:
               strncpy( celldata[user_celly][user_cellx], strninput( celldata[user_celly][user_cellx]  ) , PATH_MAX );
               break;
+
            case 'b': //blank cell
               strncpy( celldata[user_celly][user_cellx], strninput( "" ) , PATH_MAX );
               celldatatype[user_celly][user_cellx] = 1;
