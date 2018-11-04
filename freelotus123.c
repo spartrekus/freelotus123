@@ -1,7 +1,6 @@
 
 ///////////////////
 // Freelotus123
-// testing
 ///////////////////
 
 #include <stdio.h>
@@ -1851,7 +1850,7 @@ int main( int argc, char *argv[])
     if ( argc >= 2)
     if ( strcmp(argv[1], "--version" ) == 0)
     {
-	  printf( "Unibeam version: %s\n", VERSIONNBR );
+	  printf( "Software version: %s\n", VERSIONNBR );
           return 0;
     }
 
