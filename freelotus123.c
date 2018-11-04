@@ -52,6 +52,7 @@ int rows, cols;
 
 
  char filesource[PATH_MAX];
+ char debugclip[PATH_MAX];
  char clipboard[PATH_MAX];
  int clipboardtype = 0; 
  char celldata[ CELLYMAXY+10 ][ CELLYMAXX+10  ][PATH_MAX];
@@ -927,48 +928,114 @@ char *strrlf(char *str)
 ////////////////////////////////////////////////////////
 char *strfetchcontent( char *str, int foocy, int foocx  )
 { 
-      // str is input 
-      // ptr is output 
+      // str is input // ptr is output 
       char ptr[PATH_MAX];
       char charo[PATH_MAX];
       strncpy( ptr, "", PATH_MAX );
       int i,j=0;
-      for(i=0; str[i]!='\0'; i++)
+      int foocel, footrg, footrgx, footrgy;
+      for(i=0; str[i]!='\0' ; i++)
       {
-        if ( str[i] == 'R' ) //right
+
+        /////////////
+        /// if you target same S twice, it may crash because it still needs a quick check. 
+        // using S for sum is still not yet advanced. 
+        // S is still beta testing
+        /////////////
+        if (( str[i] == 'S' ) && ( str[i+1] == '(' ))  // SUM like =S(1)+1 
+        {
+           footrg = str[i+2] - 48;
+           strncat( ptr , " " , PATH_MAX - strlen( ptr ) -1 ); 
+           if ( footrg != foocx ) 
+           {
+            for( foocel=1; foocel<= CELLYMAXY ; foocel++)
+            {
+              if ( strcmp( celldata[ foocel][footrg] , "" ) != 0 ) 
+              {
+                 snprintf( charo, PATH_MAX , " + ( %s ) ", strfetchcontent( celldata[ foocel ][ footrg ], foocy , foocx+1 ) );
+                 strncat( ptr , charo , PATH_MAX - strlen( ptr ) -1 ); 
+              }
+            }
+            i=i+3;
+           }
+           else
+              strncat( ptr , " error " , PATH_MAX - strlen( ptr ) -1 ); 
+        }
+
+        /////////////
+        // C to target a given cell content (formulas)
+        // C is still beta testing
+        /////////////
+        else if (( str[i] == 'C' ) && ( str[i+1] == '(' ))  // SUM like =S(1)+1 
+        {
+           // FORMAT C(X,Y)   X--->   and   Yv vertically
+           footrgx = str[i+2]   - 48;      //  S(1)
+           footrgy = str[i+2+2] - 48;      //  C(1,1)
+           strncat( ptr , " " , PATH_MAX - strlen( ptr ) -1 ); 
+           if ( strcmp( celldata[ footrgy ][ footrgx ] , "" ) != 0 ) 
+           {
+                 snprintf( charo, PATH_MAX , " + ( %s ) ", strfetchcontent( celldata[ footrgy ][ footrgx ], footrgy , footrgx ) );
+                 strncat( ptr , charo , PATH_MAX - strlen( ptr ) -1 ); 
+           }
+           i=i+3+2; // we do still cell up to 9 and 9 (y,x), work in progress. 
+        }
+
+        /////////////
+        // Right works well
+        /////////////
+        else if ( str[i] == 'R' ) //right
         {
            snprintf( charo, PATH_MAX , " ( %s ) ", strfetchcontent( celldata[ foocy ][ foocx +1 ], foocy , foocx+1 ) );
            strncat( ptr , charo , PATH_MAX - strlen( ptr ) -1 ); 
         }
+
+        /////////////
+        // Left works well
+        /////////////
         else if ( str[i] == 'L' ) //left
         {
            snprintf( charo, PATH_MAX , " ( %s ) ", strfetchcontent( celldata[ foocy ][ foocx -1 ], foocy , foocx-1 ) );
            strncat( ptr , charo , PATH_MAX - strlen( ptr ) -1 ); 
         }
-        else if ( str[i] == 'X' )  //upper dia
+
+        /////////////
+        /// OK
+        /////////////
+        else if ( str[i] == 'X' )  //upper diagonal, left
         {
            ///snprintf( charo, PATH_MAX , "%s", celldata[ foocy -1 ][ foocx -1 ] );
            snprintf( charo, PATH_MAX , " ( %s ) ", strfetchcontent( celldata[ foocy-1 ][ foocx-1 ], foocy-1 , foocx-1 ) );
            strncat( ptr , charo , PATH_MAX - strlen( ptr ) -1 ); 
         }
+
+        /////////////
+        /// OK
+        /////////////
         else if ( str[i] == 'D' ) // Down
         {
            ///snprintf( charo, PATH_MAX , "%s", celldata[ foocy -1 ][ foocx -1 ] );
-           snprintf( charo, PATH_MAX , " ( %s ) ", strfetchcontent( celldata[ foocy+1 ][ foocx ], foocy+1 , foocx-1 ) );
+           //snprintf( charo, PATH_MAX , " ( %s ) ", strfetchcontent( celldata[ foocy+1 ][ foocx ], foocy+1 , foocx-1 ) );
+           snprintf( charo, PATH_MAX , " ( %s ) ", strfetchcontent( celldata[ foocy+1 ][ foocx ], foocy+1 , foocx ) );
            strncat( ptr , charo , PATH_MAX - strlen( ptr ) -1 ); 
         }
+
+        /////////////
+        /// OK
+        /////////////
         else if ( str[i] == 'U' ) // up
         {
            snprintf( charo, PATH_MAX , " ( %s ) ", strfetchcontent( celldata[ foocy-1 ][ foocx ], foocy-1 , foocx ) );
            //snprintf( charo, PATH_MAX , "%s", celldata[ foocy -1 ][ foocx ] );
            strncat( ptr , charo , PATH_MAX - strlen( ptr ) -1 ); 
         }
+
         else if (str[i] != '\n' && str[i] != '\n') 
         {
            //   ptr[j++]=str[i];
            snprintf( charo, PATH_MAX , "%c", str[i] );
            strncat( ptr , charo , PATH_MAX - strlen( ptr ) -1 ); 
         }
+
       } 
       //ptr[j]='\0';
       //size_t siz = sizeof ptr ; 
@@ -1835,6 +1902,7 @@ void main_app_draw()
           //char *strfetchcontent( char *str, int foocy, int foocx  )
           mvprintw( posy , posx, "%f",  
           te_interp( foocellcontent , 0 ) );
+          strncpy( debugclip, foocellcontent , PATH_MAX );
        }
        
        // end of loop right
@@ -2166,6 +2234,7 @@ int main( int argc, char *argv[])
               strncpy( clipboard, celldata[user_celly][user_cellx], PATH_MAX );
               clipboardtype = celldatatype[user_celly][user_cellx]; 
               break;
+
            case 'x':
            case 330:
               strncpy( clipboard, celldata[user_celly][user_cellx], PATH_MAX );
@@ -2194,6 +2263,12 @@ int main( int argc, char *argv[])
            case 'b': //blank cell
               strncpy( celldata[user_celly][user_cellx], strninput( "" ) , PATH_MAX );
               celldatatype[user_celly][user_cellx] = 1;
+              break;
+
+           case '#':
+              erase(); 
+              mvprintw( 0, 0, "%s Clip" , debugclip );
+              getch();
               break;
 
          }
