@@ -17,7 +17,7 @@
 #define MYOS 0
 #endif
 
-#define VERSIONNBR "0.12" 
+#define VERSIONNBR "0.14" 
 
 /// max lines of a given file
 #define CELLYMAXY 120 
