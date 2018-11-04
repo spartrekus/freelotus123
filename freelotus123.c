@@ -18,6 +18,8 @@
 #define MYOS 0
 #endif
 
+#define VERSIONNBR "0.12" 
+
 /// max lines of a given file
 #define CELLYMAXY 120 
 #define CELLYMAXX 11
@@ -1844,6 +1846,18 @@ void main_app_draw()
 ///////////////
 int main( int argc, char *argv[])
 {
+
+    ////////////////////////////////////////////////////////
+    if ( argc >= 2)
+    if ( strcmp(argv[1], "--version" ) == 0)
+    {
+	  printf( "Unibeam version: %s\n", VERSIONNBR );
+          return 0;
+    }
+
+
+
+
     int foo; int foochg; 
     char foostr[PATH_MAX];
     char foomsgstr[PATH_MAX];
