@@ -1523,6 +1523,35 @@ void void_cell_clear()
 
 
 
+   void printfile( char *ttuxfile )
+   {
+       int posyy = 2 ;  
+       int zui = 0 ;  FILE *fpsource;  char ptrout[PATH_MAX];
+       color_set( 7, NULL );  attron( A_REVERSE );
+       gfxbox( 0, cols/2-2, rows-1, cols-1 );
+       gfxframe( 0, cols/2-2, rows-1, cols-1 );
+           if ( fexist( ttuxfile ) == 1 )
+           {  
+             mvprintw( 0, cols/2, "[FILE: %s]", fbasename( ttuxfile ) );
+             posyy = 2;
+             fpsource = fopen( ttuxfile , "r");
+             while(  !feof(fpsource) )
+             {
+                 if ( !feof(fpsource) )
+                 {
+                   fgets( ptrout , PATH_MAX , fpsource ); 
+                   if ( posyy <= rows-3 )
+                    for(zui=0; ptrout[zui]!='\0'; zui++)
+                     if ( ptrout[zui] != '\n' )
+                      if ( zui <=  cols/2 -2 )
+                        mvprintw( posyy, cols/2 + zui , "%c", ptrout[zui] );
+                   posyy++;
+                 }
+             }
+             fclose(fpsource);
+           }
+   }
+
 
 
 /////////////////////////
@@ -1828,6 +1857,8 @@ void main_app_draw()
    gfxhline( rows-1 , 0, cols-1 );
 
    mvprintw( rows-1, 0, "[%d,%d]|%s|", user_celly, user_cellx, filesource );
+   printw( " [F1:Help][F9:Menu][F10:Quit]");
+
    if (  celldatatype[ user_celly][user_cellx ]  == 2 )  
      mvprintw( rows-2, 0, "[%d][=%s]",  
      celldatatype[ user_celly][user_cellx ] , 
@@ -1940,7 +1971,26 @@ int main( int argc, char *argv[])
               break;
 
            case KEY_F(1):
-              foo = void_ncwin_message( "Help Content" , "Help", "hjlk: move, enter/=:cell edit, ?:content, F10:exit, have fun with freedom and opensource." );
+           //   foo = void_ncwin_message( "Help Content" , "Help", 
+           //   "hjlk: move, enter/=:cell edit, ?:content, F10:exit, have fun with freedom and opensource." );
+           color_set( 9, NULL ); attron( A_REVERSE );
+           gfxbox(    2, 2,    rows-3, cols-3 );
+           gfxshadow( 2, 2, rows-3, cols-3 );
+           mvtitle( 2 , "HELP" );
+           foo = 5;
+           mvprintw( foo++, 4, "hjlk: move (like vim)" ) ; 
+           mvprintw( foo++, 4, "Enter:cell edit (string)");
+           mvprintw( foo++, 4, "= to edit a formula (math/formulas)");
+           mvprintw( foo++, 4, "    = L fetch formula content of left cell " );
+           mvprintw( foo++, 4, "    = X fetch formula content of upper/left cell " );
+           mvprintw( foo++, 4, "    = R fetch formula content of right cell " );
+           mvprintw( foo++, 4, "F1 or ?: content"); 
+           mvprintw( foo++, 4, "F2: Save"); 
+           mvprintw( foo++, 4, "F3: Load"); 
+           mvprintw( foo++, 4, "F4: Save as..."); 
+           mvprintw( foo++, 4, "F10:exit, have fun with freedom and opensource." );
+           mvbarok( rows-5 );
+              getch();
               break;
 
            case '?':
@@ -1993,6 +2043,7 @@ int main( int argc, char *argv[])
                 else if ( foochg == 'g' ) nexp_user_sel = 1;
                 else if ( foochg == 'r' ) ncurses_runwith( " tcview " , nexp_user_fileselection );
                 else if ( foochg == 10 ) { strncpy( filesource, nexp_user_fileselection, PATH_MAX ); void_cell_clear(); void_load(); foochg = 'i'; }
+                else if ( foochg == 'o' ) { printfile( nexp_user_fileselection ); getch();  }
               }
               break;
 
