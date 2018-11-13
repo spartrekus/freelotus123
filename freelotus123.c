@@ -23,6 +23,8 @@
 #define CELLYMAXY 120 
 #define CELLYMAXX 11
 #define CELLXSPACE 11
+int savecellymaxy;
+int savecellymaxx;
 
 #include <stdlib.h>
 #include <string.h>
@@ -1465,12 +1467,15 @@ void ncurses_runwith( char *thecmd , char *thestrfile  ) //thecmd first
 ////////////////////////
 void void_load()
 {
-    int y1 = 0; int x1=0; 
-    int y2 = rows-1; int x2= cols -1 ;
-    int foox ; int fooy; 
-    color_set( 7, NULL ); attron( A_REVERSE ); 
-    for( fooy = y1 ; fooy <= y2 ; fooy++) 
-    for( foox = x1 ; foox <= x2 ; foox++) 
+  savecellymaxy = CELLYMAXY;
+  savecellymaxx = CELLYMAXX;
+  
+  int y1 = 0; int x1=0; 
+  int y2 = rows-1; int x2= cols -1 ;
+  int foox ; int fooy; 
+  color_set( 7, NULL ); attron( A_REVERSE ); 
+  for( fooy = y1 ; fooy <= y2 ; fooy++) 
+  for( foox = x1 ; foox <= x2 ; foox++) 
       mvprintw( fooy , foox , " " );
     
   int foocelly = 1;
@@ -1798,9 +1803,9 @@ void app_save( char *strfileoutput )
    int readcellx , readcelly ; 
    FILE *fp6;
    fp6 = fopen( strfileoutput , "wb+");
-   for( readcelly=1 ; readcelly<=CELLYMAXY ; readcelly++) 
+   for( readcelly=1 ; readcelly<= savecellymaxy ; readcelly++) 
    {
-     for( readcellx=1 ; readcellx<=CELLYMAXX ; readcellx++) 
+     for( readcellx=1 ; readcellx<= savecellymaxx ; readcellx++) 
      {
         if ( celldatatype[readcelly][readcellx] == 2 ) fputs( "=", fp6 );
         fputs( celldata[readcelly][readcellx], fp6 );
@@ -1875,8 +1880,15 @@ void main_app_draw()
      {
       for( readcellx = 1 ; readcellx <= CELLYMAXX ; readcellx++) 
       {
+       color_set( 0, NULL ); attroff( A_REVERSE ); 
        posx = user_col_space * readcellx ;  
-       attroff( A_REVERSE ); 
+
+       if ( strcmp( celldata[ readcelly ][ readcellx ] , "!MAX" ) == 0 ) //new
+       {  savecellymaxy = readcelly ;  savecellymaxx = readcellx ; }
+
+       if (( readcellx == savecellymaxx ) && ( readcelly == savecellymaxy ))
+             color_set( 5, NULL ); 
+
        if ( ( user_cellx == readcellx ) && ( user_celly == readcelly ) ) {   
              attron(A_REVERSE );  
        }
@@ -1890,6 +1902,7 @@ void main_app_draw()
           strncpy( fetchlinetmp, "" , PATH_MAX );
           strncpy( fetchlinetmp, celldata[readcelly][readcellx] , PATH_MAX );
           //mvprintw( posy , posx, "%s", celldata[readcelly][readcellx] );
+
           for( fetchi = 0 ; ( fetchi <= strlen( fetchlinetmp ) ); fetchi++ )
             if ( fetchlinetmp[ fetchi ] != '\n' )
              if ( fetchlinetmp[ fetchi ] != '\0' )
@@ -1918,6 +1931,9 @@ void main_app_draw()
      posy++;
     }
    }
+   color_set( 0, NULL ); 
+
+
 
    // lower status line/bar and content
    attroff( A_REVERSE ); color_set( 0, NULL );  attroff( A_BOLD );
@@ -1958,6 +1974,7 @@ int main( int argc, char *argv[])
 
     int foo; int foochg; 
     char foostr[PATH_MAX];
+    char foocwd[PATH_MAX];
     char foomsgstr[PATH_MAX];
     //////////////////////////////////////////
     strncpy( filesource , "noname.ws1" , PATH_MAX );
@@ -1992,6 +2009,7 @@ int main( int argc, char *argv[])
     init_pair(11,  COLOR_RED,     COLOR_WHITE);
     init_pair(12,  COLOR_BLUE,    COLOR_YELLOW);
     init_pair(13,  COLOR_BLUE,    COLOR_MAGENTA);
+
 
     erase();
     getmaxyx( stdscr, rows, cols);
@@ -2110,10 +2128,37 @@ int main( int argc, char *argv[])
                 else if ( foochg == 'k' ) nexp_user_sel--;
                 else if ( foochg == 'g' ) nexp_user_sel = 1;
                 else if ( foochg == 'r' ) ncurses_runwith( " tcview " , nexp_user_fileselection );
+                else if ( foochg == 'v' ) ncurses_runwith( " vim " , nexp_user_fileselection );
                 else if ( foochg == 10 ) { strncpy( filesource, nexp_user_fileselection, PATH_MAX ); void_cell_clear(); void_load(); foochg = 'i'; }
                 else if ( foochg == 'o' ) { printfile( nexp_user_fileselection ); getch();  }
+                else if ( foochg == 'c' ) 
+                {
+                      strncpy( foostr , getcwd( foocwd, PATH_MAX ), PATH_MAX );
+                      chdir( getenv( "HOME" ) );
+                      if ( fexist( ".clipboard" ) == 1 )
+                      {
+                        printfile( ".clipboard" ); 
+                        ch = getch(); 
+                        if ( ch == 'v' )         ncurses_runwith( " vim " , ".clipboard" );
+                        else if  ( ch == 'n' )   ncurses_runwith( " screen -d -m nedit  " , ".clipboard" );
+                      }
+                      chdir( foostr );
+                }
               }
               break;
+
+             case 'c':
+                      strncpy( foostr , getcwd( foocwd, PATH_MAX ), PATH_MAX );
+                      chdir( getenv( "HOME" ) );
+                      if ( fexist( ".clipboard" ) == 1 )
+                      {
+                        printfile( ".clipboard" ); 
+                        ch = getch(); 
+                        if ( ch == 'v' )  ncurses_runwith( " vim " , ".clipboard" );
+                        else if  ( ch == 'n' )   ncurses_runwith( " screen -d -m nedit  " , ".clipboard" );
+                      }
+                      chdir( foostr );
+                   break;
 
            case 'v':
               snprintf( foostr , PATH_MAX , "Would you like to use vim with %s filename.", filesource );
@@ -2183,7 +2228,7 @@ int main( int argc, char *argv[])
               user_cellx = CELLYMAXX;
               break;
 
-           case 'c':
+           case 'C':
               void_mycolors(); getch();
               break;
 
@@ -2216,6 +2261,7 @@ int main( int argc, char *argv[])
               user_celly++;
               break;
 
+
            case '(':
               user_col_charmax--;
               break;
@@ -2231,10 +2277,21 @@ int main( int argc, char *argv[])
               break;
 
            case 'y':
+           case KEY_F(5):
               strncpy( clipboard, celldata[user_celly][user_cellx], PATH_MAX );
               clipboardtype = celldatatype[user_celly][user_cellx]; 
               break;
-
+           case 'p':
+           case KEY_F(6):
+              strncpy( celldata[user_celly][user_cellx], clipboard , PATH_MAX );
+              celldatatype[user_celly][user_cellx] = 1;
+              celldatatype[user_celly][user_cellx] = clipboardtype ; 
+              break;
+           case KEY_F(7):
+              strncpy( celldata[user_celly][user_cellx], strninput( "" ) , PATH_MAX );
+              celldatatype[user_celly][user_cellx] = 1;
+              break;
+           case KEY_F(8):
            case 'x':
            case 330:
               strncpy( clipboard, celldata[user_celly][user_cellx], PATH_MAX );
@@ -2242,10 +2299,11 @@ int main( int argc, char *argv[])
               strncpy( celldata[user_celly][user_cellx], "" , PATH_MAX );
               celldatatype[user_celly][user_cellx] = 1;
               break;
-           case 'p':
-              strncpy( celldata[user_celly][user_cellx], clipboard , PATH_MAX );
+
+           case 4:
+              snprintf( foostr , PATH_MAX , "id-%s", strtimestamp() );
+              strncpy( celldata[user_celly][user_cellx], foostr , PATH_MAX );
               celldatatype[user_celly][user_cellx] = 1;
-              celldatatype[user_celly][user_cellx] = clipboardtype ; 
               break;
 
 
@@ -2268,7 +2326,13 @@ int main( int argc, char *argv[])
            case '#':
               erase(); 
               mvprintw( 0, 0, "%s Clip" , debugclip );
-              getch();
+              mvprintw( 5, 2, "Define max save y/x cell [y/N] ?" );
+              ch = getch();
+              if ( ( ch == '1' ) || ( ch == 'y' ) ) 
+              {
+                 savecellymaxy = user_celly;  
+                 savecellymaxx = user_cellx;
+              }
               break;
 
          }
