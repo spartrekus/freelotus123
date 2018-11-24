@@ -20,8 +20,9 @@
 #define VERSIONNBR "0.14" 
 
 /// max lines of a given file
-#define CELLYMAXY 120 
-#define CELLYMAXX 11
+#define CELLYMAXY 101 
+#define CELLYMAXX 18
+
 #define CELLXSPACE 11
 int savecellymaxy;
 int savecellymaxx;
@@ -1971,19 +1972,17 @@ int main( int argc, char *argv[])
 
 
 
-
-    int foo; int foochg; 
+    int foo; int foochg; int i ; 
     char foostr[PATH_MAX];
     char foocwd[PATH_MAX];
     char foomsgstr[PATH_MAX];
     //////////////////////////////////////////
     strncpy( filesource , "noname.ws1" , PATH_MAX );
+    //if ( fexist( argv[ 1 ] ) == 1 ) 
     if ( argc == 2)
-    if ( fexist( argv[ 1 ] ) == 1 ) 
     {
-          strncpy( filesource , argv[ 1 ], PATH_MAX );
+        strncpy( filesource , argv[ 1 ], PATH_MAX );
     }
-
 
 
     int fooy, foox; 
@@ -2181,6 +2180,24 @@ int main( int argc, char *argv[])
               strncpy( foostr, strninput( "" ) , PATH_MAX );
               if (  strcmp( foostr, "linecount" ) == 0 )
                    {  erase(); mvcenter( 0, "INFORMATION" ); mvprintw( 2, 0, "Line count: %s %d", filesource, filelinecount(     filesource ) ); getch();  }
+
+              else if (  strcmp( foostr, "path" ) == 0 )
+              {
+                     erase();
+                     mvprintw( 0 , 0 , "PATH: %s" , getcwd( foocwd , PATH_MAX ) );
+                     getch();
+              }
+
+              else if (  strcmp( foostr, "args" ) == 0 )
+              {
+                     erase();
+                     if ( argc >= 2)
+                     {
+                           for( i = 1 ; i < argc ; i++) 
+                 	       mvprintw( i, 0 , "Arg nbr: %d/%d: %s fexist=%d\n", i, argc-1 ,  argv[ i ], fexist( argv[ i ]) );
+                     }
+                     getch();
+              }
               break;
 
            case 'd':
